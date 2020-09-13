@@ -9,7 +9,7 @@ defmodule Json.MixProject do
       description: description(),
       package: package(),
       deps: deps(),
-      source_url: "https://github.com/lygaret/jsonrfc"
+      source_url: "https://github.com/lygaret/ex-jsonrfc"
     ]
   end
 
@@ -33,7 +33,7 @@ defmodule Json.MixProject do
     [
       licenses: ["MIT"],
       links: %{
-        "Github" => "https://github.com/lygaret/jsonrfc",
+        "Github" => "https://github.com/lygaret/ex-jsonrfc",
         "Homepage" => "https://accidental.cc"
       }
     ]
