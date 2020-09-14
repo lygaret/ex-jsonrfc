@@ -20,6 +20,15 @@ defmodule Json.Patch do
   def copy(from, path),
     do: %{op: :copy, from: from, path: path}
 
+  @doc """
+  Evaluates the given list of ops against the document, and additionally returns the operations themselves in the result tuple.
+  """
+  def evaluate_with_ops(document, ops) do
+    case evaluate(document, ops) do
+      {:ok, document} -> {:ok, document, ops}
+      error -> error
+    end
+  end
 
   @doc """
   Given a list of `ops`, apply them all to the given document.
