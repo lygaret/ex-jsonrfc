@@ -9,7 +9,11 @@ defmodule Json.MixProject do
       description: description(),
       package: package(),
       deps: deps(),
-      source_url: "https://github.com/lygaret/ex-jsonrfc"
+      source_url: "https://github.com/lygaret/ex-jsonrfc",
+      docs: [
+        main: "readme",
+        extras: ["README.md"]
+      ]
     ]
   end
 
