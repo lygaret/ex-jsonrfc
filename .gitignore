@@ -16,6 +16,10 @@
 # Ignore .fetch files in case you like to edit your project deps locally.
 /.fetch
 
+# Ignore plt caches for dialyzer
+/priv/plts
+!/priv/plts/.keep
+
 # If the VM crashes, it generates a dump, let's ignore it too.
 erl_crash.dump
 
