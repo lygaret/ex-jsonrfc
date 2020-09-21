@@ -20,8 +20,8 @@ defmodule JsonRfc.Pointer do
       {:error, :invalid_pointer}
   """
 
-  @type path :: [JsonRfc.key()]
-  @spec parse(iodata) :: {:ok, path} | {:error, :invalid_pointer}
+  @type t :: [JsonRfc.key()]
+  @spec parse(iodata) :: {:ok, t} | {:error, :invalid_pointer}
 
   def parse(path) do
     case path do
@@ -95,7 +95,7 @@ defmodule JsonRfc.Pointer do
 
   @type fetch_errors :: {:error, :invalid_pointer} | {:error, :invalid_path}
   @spec fetch(JsonRfc.value(), binary) :: {:ok, JsonRfc.value()} | fetch_errors
-  @spec fetch(JsonRfc.value(), path) :: {:ok, JsonRfc.value()} | fetch_errors
+  @spec fetch(JsonRfc.value(), t) :: {:ok, JsonRfc.value()} | fetch_errors
 
   # parse the pointer if it's a string
   def fetch(doc, pointer) when is_binary(pointer) do
@@ -162,13 +162,13 @@ defmodule JsonRfc.Pointer do
   @spec transform(JsonRfc.value(), binary(), (JsonRfc.value() -> JsonRfc.value())) ::
           {:ok, JsonRfc.value()} | {:error, term}
 
-  @spec transform(JsonRfc.value(), path(), (JsonRfc.value() -> JsonRfc.value())) ::
+  @spec transform(JsonRfc.value(), t(), (JsonRfc.value() -> JsonRfc.value())) ::
           {:ok, JsonRfc.value()} | {:error, term}
 
   @spec transform(JsonRfc.value(), binary(), (JsonRfc.value(), JsonRfc.key() -> JsonRfc.value())) ::
           {:ok, JsonRfc.value()} | {:error, term}
 
-  @spec transform(JsonRfc.value(), path(), (JsonRfc.value(), JsonRfc.key() -> JsonRfc.value())) ::
+  @spec transform(JsonRfc.value(), t(), (JsonRfc.value(), JsonRfc.key() -> JsonRfc.value())) ::
           {:ok, JsonRfc.value()} | {:error, term}
 
   def transform(document, pointer, callback) when is_binary(pointer) do

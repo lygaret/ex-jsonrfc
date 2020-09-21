@@ -6,30 +6,53 @@ defmodule JsonRfc.Patch do
   import JsonRfc, only: [is_array_index: 2, is_array_append: 2]
   import JsonRfc.Pointer, only: [transform: 3, fetch: 2]
 
-  def add(pointer, value),
-    do: %{op: :add, path: pointer, value: value}
+  @type ops :: :add | :replace | :remove | :move | :copy
+  @type opmap :: %{:op => ops, optional(term) => any}
+  @type opmap(op) :: %{:op => op, optional(term) => any}
 
-  def replace(pointer, value),
-    do: %{op: :replace, path: pointer, value: value}
+  @type path :: JsonRfc.Pointer.t() | iodata()
 
-  def remove(pointer),
-    do: %{op: :remove, path: pointer}
+  @doc """
+  Operation: add the given `value` to the document at `path`.
 
+  * Supports the array append operator (`/-`) to add to the end of the array.
+  * If a value is already present at `path` it is replaced.
+  * If the pointer is the root (""), replaces the entire document.
+  * Handles the array append operator to append to an array.
+  * Shifts values right when inserting into an array
+  """
+  @spec add(path(), JsonRfc.value()) :: opmap(:add)
+  def add(path, value),
+    do: %{op: :add, path: path, value: value}
+
+  @doc """
+  Operation: replace the value in the document at `path`
+  Like add, except it fails if there is no value at the given key.
+  """
+  @spec replace(path(), JsonRfc.value()) :: opmap(:replace)
+  def replace(path, value),
+    do: %{op: :replace, path: path, value: value}
+
+  @doc """
+  Operation: remove the value in the document at `path`
+  """
+  @spec remove(path()) :: opmap(:remove)
+  def remove(path),
+    do: %{op: :remove, path: path}
+
+  @doc """
+  Operation: move the value in the document `from` to `path`
+  """
+  @spec move(path(), path()) :: opmap(:move)
   def move(from, path),
     do: %{op: :move, from: from, path: path}
 
+  @doc """
+  Operation: copy the value at `from` in the document to `path`
+  """
+  @spec copy(path(), path()) :: opmap(:copy)
   def copy(from, path),
     do: %{op: :copy, from: from, path: path}
-
-  @doc """
-  Evaluates the given list of ops against the document, and additionally returns the operations themselves in the result tuple.
-  """
-  def evaluate_with_ops(document, ops) do
-    case evaluate(document, ops) do
-      {:ok, document} -> {:ok, document, ops}
-      error -> error
-    end
-  end
 
   @doc """
   Given a list of `ops`, apply them all to the given document.
@@ -51,7 +74,9 @@ defmodule JsonRfc.Patch do
       iex> JsonRfc.Patch.evaluate(doc, ops)
       {:ok, %{"foo" => %{"bar" => 3}, "baz" => %{"bar" => 3}}}
   """
-  def evaluate(document, ops)
+
+  @spec evaluate(JsonRfc.value(), opmap()) :: {:ok, JsonRfc.value()} | {:error, term}
+  @spec evaluate(JsonRfc.value(), list(opmap())) :: {:ok, JsonRfc.value()} | {:error, term}
 
   def evaluate(document, ops) when is_list(ops) do
     # reduce the operation list over the document, stopping on error
@@ -63,10 +88,6 @@ defmodule JsonRfc.Patch do
     end)
   end
 
-  # Adds `value` to the `document` at `path`.
-  # If a value is already present at `path` it is replaced.
-  # Handles the array append operator to append to an array.
-  # Shifts values right when inserting into an array
   def evaluate(document, %{op: :add, path: pointer, value: value}) do
     transform(document, pointer, fn enum, key ->
       cond do
@@ -136,4 +157,16 @@ defmodule JsonRfc.Patch do
       error -> error
     end
   end
+
+  @doc """
+  Evaluates the given list of ops against the document, and additionally returns the operations themselves in the result tuple.
+  """
+  @spec evaluate_with_ops(JsonRfc.value(), opmap() | list(opmap())) :: {:ok, JsonRfc.value()} | {:error, term}
+  def evaluate_with_ops(document, ops) do
+    case evaluate(document, ops) do
+      {:ok, document} -> {:ok, document, ops}
+      error -> error
+    end
+  end
+
 end
