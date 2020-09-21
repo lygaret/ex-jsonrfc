@@ -1,2 +1,3 @@
 v0.1.0 - initial release
 v0.2.0 - added `Patch.evaluate_with_ops`, which returns the operations in addition to applying them to the given document.
+v0.3.0 - moved to JsonRfc namespace, much better docs and typespecs
