@@ -1,4 +1,6 @@
-defmodule Json.MixProject do
+defmodule JsonRfc.MixProject do
+  @moduledoc false
+
   use Mix.Project
 
   def project do

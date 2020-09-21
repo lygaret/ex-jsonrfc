@@ -1,36 +1,10 @@
-defmodule Json.Pointer do
-  alias __MODULE__
-
+defmodule JsonRfc.Pointer do
   @moduledoc ~s"""
   Fetch and transform data in Maps by evaluating JSON pointers
   """
 
   @doc """
-  Returns true if `array` is a list, `index` is an integer, and `index` isn't out of bounds.
-  """
-  def is_array_index(array, index) do
-    is_list(array) and is_integer(index) and index >= 0 and length(array) > index
-  end
-
-  @doc """
-  Returns true if `array` is a list, and `index` is the special 'append' indicator.
-  """
-  def is_array_append(array, index) do
-    is_list(array) and index == "-"
-  end
-
-  @doc """
-  Returns true if `array` is a list, and `index` is either a valid index or the '-' append indicator
-  """
-  def is_array(array, index) do
-    is_array_index(array, index) or is_array_append(array, index)
-  end
-
-  @doc """
   Parses a string representing a JSON pointer into an array of traversals.
-
-  Returns `{:ok, list(traversals)}` when valid pointer
-  Returns `{:error, :invalid_path}` when the path is invalid
 
   ## Rules (per RFC 6901)
   * pointers must start with a `/` character
@@ -39,67 +13,70 @@ defmodule Json.Pointer do
   * integer keys are simply integers, not strings of integers
 
   ## Examples
-      iex> Json.Pointer.parse("/foo/bar/4/baz")
+      iex> JsonRfc.Pointer.parse("/foo/bar/4/baz")
       {:ok, ["foo", "bar", 4, "baz"]}
 
-      iex> Json.Pointer.parse("")
-      {:ok, []}
-
-      iex> Json.Pointer.parse("/")
-      {:ok, [""]}
-
-      # parses numbers as ints only if they are the full key
-      iex> Json.Pointer.parse("/8bar/9")
-      {:ok, ["8bar", 9]}
-
-      iex> Json.Pointer.parse(~S"/i\\j")
-      {:ok, [~S"i\\j"]}
-
-      iex> Json.Pointer.parse("/~10/~01/~0/~1")
-      {:ok, ["/0", "~1", "~", "/"]}
-
-      # require a leading /
-      iex> Json.Pointer.parse("foo")
+      iex> JsonRfc.Pointer.parse("whatever")
       {:error, :invalid_pointer}
   """
-  def parse(path)
 
-  # empty path is the whole document
-  def parse(""), do: {:ok, []}
+  @type path :: [JsonRfc.key()]
+  @spec parse(iodata) :: {:ok, path} | {:error, :invalid_pointer}
 
-  # just the slash is the blank key
-  def parse("/"), do: {:ok, [""]}
+  def parse(path) do
+    case path do
+      # empty path is the whole document
+      "" ->
+        {:ok, []}
 
-  # otherwise, strip the leading path, split, unescape, and attempt to resolve ints
-  def parse("/" <> path) do
-    path =
-      path
-      |> String.split("/")
-      |> Enum.map(&unescape_key/1)
-      |> Enum.map(&try_integer_key/1)
+      # just the slash is the blank key
+      "/" ->
+        {:ok, [""]}
 
-    {:ok, path}
+      # leading slash gets parsed
+      "/" <> path ->
+        path =
+          path
+          |> String.split("/")
+          |> Enum.map(&unescape_key/1)
+          |> Enum.map(&try_integer_key/1)
+
+        {:ok, path}
+
+      # this is if pointer isn't a string, or doesn't start with /
+      _ ->
+        {:error, :invalid_pointer}
+    end
   end
 
-  # this is if pointer isn't a string, or doesn't start with /
-  def parse(_),
-    do: {:error, :invalid_pointer}
-
+  @spec unescape_key(String.t()) :: String.t()
   defp unescape_key(part) do
     # order is important, see RFC 6901
     part
+    |> String.replace(~S(\"), "\"", global: true)
+    |> String.replace(~S(\\), "\\", global: true)
     |> String.replace("~1", "/", global: true)
     |> String.replace("~0", "~", global: true)
   end
 
+  @spec try_integer_key(String.t()) :: integer | binary
   defp try_integer_key(part) do
-    case Integer.parse(part) do
-      # fully an int
-      {num, ""} -> num
-      # partially int
-      {_, _} -> part
-      # not even an int
-      :error -> part
+    case part do
+      "0" ->
+        0
+
+      # leading zero can only be a string per RFC, see specs
+      "0" <> _ ->
+        part
+
+      # parse returns {num, "rest"} or error; if rest exists, it's not a number
+      # we're probably overly generous, but strictness isn't a goal
+      _ ->
+        case Integer.parse(part) do
+          {num, ""} -> num
+          {_, _} -> part
+          :error -> part
+        end
     end
   end
 
@@ -112,43 +89,41 @@ defmodule Json.Pointer do
 
   ## Examples
 
-      iex> Json.Pointer.fetch(%{"foo" => %{"bar" => "baz"}}, "/foo/bar")
+      iex> JsonRfc.Pointer.fetch(%{"foo" => [%{"bar" => "baz"}]}, "/foo/0/bar")
       {:ok, "baz"}
-
-      iex> Json.Pointer.fetch(%{"foo" => [10, 11, 12, 13]}, "/foo/2")
-      {:ok, 12}
-
-      # it attempts parse first...
-      iex> Json.Pointer.fetch(%{"foo" => 4}, "bad path")
-      {:error, :invalid_pointer}
-
-      # and fails if a good path isn't valid in the given object
-      iex> Json.Pointer.fetch(%{"foo" => 4}, "/bad/path")
-      {:error, :invalid_path}
-
-      # you can also pass an already parsed path to fetch
-      iex> Json.Pointer.fetch(%{"foo" => [10, 11, 12, 13]}, ["foo", 2])
-      {:ok, 12}
   """
+
+  @type fetch_errors :: {:error, :invalid_pointer} | {:error, :invalid_path}
+  @spec fetch(JsonRfc.value(), binary) :: {:ok, JsonRfc.value()} | fetch_errors
+  @spec fetch(JsonRfc.value(), path) :: {:ok, JsonRfc.value()} | fetch_errors
+
+  # parse the pointer if it's a string
   def fetch(doc, pointer) when is_binary(pointer) do
-    case Pointer.parse(pointer) do
-      {:ok, path} -> fetch(doc, path)
-      _error -> {:error, :invalid_pointer}
+    with {:ok, path} <- parse(pointer) do
+      fetch(doc, path)
     end
   end
 
   # traverse against a map that contains the key
+  # if key is a number, convert to a string before indexing:
+  # parse con't know context, so integer keys may be present, but
+  # JSON objects can have only string keys per RFC
   def fetch(map, [key | path]) when is_map(map) do
+    key = if is_number(key), do: Integer.to_string(key), else: key
+
     case Map.fetch(map, key) do
       {:ok, value} -> fetch(value, path)
       _error -> {:error, :invalid_path}
     end
   end
 
-  # traverse against an array with a valid array index
+  # traverse against an array
+  # - if the index isn't an int or present, invalid path
   def fetch(array, [index | path]) when is_list(array) do
-    case Enum.fetch(array, index) do
-      {:ok, value} -> fetch(value, path)
+    with true <- JsonRfc.is_array_index(array, index),
+         {:ok, value} <- Enum.fetch(array, index) do
+      fetch(value, path)
+    else
       _error -> {:error, :invalid_path}
     end
   end
@@ -166,33 +141,25 @@ defmodule Json.Pointer do
 
       # given a callback of arity 1, transforms with the value at `path`
       iex> doc = %{"foo" => %{"bar" => [15]}}
-      iex> Json.Pointer.transform(doc, "/foo/bar/0", &(&1 * 100))
+      iex> JsonRfc.Pointer.transform(doc, "/foo/bar/0", &(&1 * 100))
       {:ok, %{"foo" => %{"bar" => [1500]}}}
 
       # given a callback of arity 2, transforms with the container and index
       iex> doc = %{"foo" => %{"bar" => 3}}
-      iex> Json.Pointer.transform(doc, "/foo/bar", fn m, k -> Map.delete(m, k) end)
+      iex> JsonRfc.Pointer.transform(doc, "/foo/bar", fn m, k -> Map.delete(m, k) end)
       {:ok, %{"foo" => %{}}}
-
-      # transforms are allowed to return ok/error tuples in addition to bare values
-      iex> doc = %{"foo" => [1]}
-      iex> Json.Pointer.transform(doc, "/foo/0", fn i -> {:ok, i + 1} end)
-      {:ok, %{"foo" => [2]}}
-
-      # transforms are allowed to return ok/error tuples in addition to bare values
-      iex> doc = %{"foo" => [1]}
-      iex> Json.Pointer.transform(doc, "/foo/0", fn _, _ -> {:error, :oh_no_not_again} end)
-      {:error, :oh_no_not_again}
-
-      # gives errors on bad paths
-      iex> doc = %{"foo" => %{"bar" => %{"baz" => 15}}}
-      iex> Json.Pointer.transform(doc, "/foo/bar/cat", fn _ -> 100 end)
-      {:error, :invalid_path}
   """
+
+  @typep transform_value_callback :: (JsonRfc.value() -> JsonRfc.value())
+  @typep transform_container_callback :: (JsonRfc.value(), JsonRfc.key() -> JsonRfc.value())
+  @typep transform_callback :: transform_value_callback() | transform_container_callback()
+
+  @spec transform(JsonRfc.value(), binary() | path(), transform_callback()) ::
+          {:ok, JsonRfc.value()} | {:error, term}
+
   def transform(document, pointer, callback) when is_binary(pointer) do
-    case Pointer.parse(pointer) do
-      {:ok, path} -> transform(document, path, callback)
-      _error -> {:error, :invalid_pointer}
+    with {:ok, path} <- parse(pointer) do
+      transform(document, path, callback)
     end
   end
 

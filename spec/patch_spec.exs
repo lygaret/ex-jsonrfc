@@ -1,9 +1,11 @@
 defmodule PatchSpec do
+  @moduledoc false
+
   use ESpec, async: true
-  doctest Json.Patch, async: true
+  doctest JsonRfc.Patch, async: true
 
   describe "evaluate: add" do
-    import Json.Patch, only: [evaluate: 2, add: 2]
+    import JsonRfc.Patch, only: [evaluate: 2, add: 2]
 
     let(:doc, do: %{"foo" => 5, "bar" => [1, 2, 3]})
 
@@ -29,7 +31,7 @@ defmodule PatchSpec do
   end
 
   describe "evaluate: replace" do
-    import Json.Patch, only: [evaluate: 2, replace: 2]
+    import JsonRfc.Patch, only: [evaluate: 2, replace: 2]
 
     let(:doc, do: %{"foo" => 5, "bar" => [1, 2, 3]})
 
@@ -55,7 +57,7 @@ defmodule PatchSpec do
   end
 
   describe "evaluate: remove" do
-    import Json.Patch, only: [evaluate: 2, remove: 1]
+    import JsonRfc.Patch, only: [evaluate: 2, remove: 1]
 
     let(:doc, do: %{"foo" => 5, "bar" => [1, 2, 3]})
 

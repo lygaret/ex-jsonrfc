@@ -1,4 +1,4 @@
-# JsonRFC
+# JsonRfc
 
 Pure-elixir implementations of IETF RFCs 6901 and 6902,
 JSON Pointer and Patch respectively.
@@ -17,10 +17,10 @@ or arrays.
 ```elixir
   iex> doc = %{"foo" => %{"bar" => "baz", "xyzzy" => ["a", "b", "c"]}}
 
-  iex> Json.Pointer.fetch(doc, "/foo/bar")
+  iex> JsonRfc.Pointer.fetch(doc, "/foo/bar")
   {:ok, "baz"}
 
-  iex> Json.Pointer.fetch(doc, "/foo/xyzzy/1")
+  iex> JsonRfc.Pointer.fetch(doc, "/foo/xyzzy/1")
   {:ok, "b"}
 ```
 
@@ -36,14 +36,14 @@ string keys and arrays.
 ```elixir
   iex> doc = %{"foo" => [], "byebye" => 5}
   iex> ops = [
-  ...>   Json.Patch.add("/bar", 3),
-  ...>   Json.Patch.replace("/foo", %{}),
-  ...>   Json.Patch.remove("/byebye"),
-  ...>   Json.Patch.move("/bar", "/foo/bar"),
-  ...>   Json.Patch.copy("/foo", "/baz")
+  ...>   JsonRfc.Patch.add("/bar", 3),
+  ...>   JsonRfc.Patch.replace("/foo", %{}),
+  ...>   JsonRfc.Patch.remove("/byebye"),
+  ...>   JsonRfc.Patch.move("/bar", "/foo/bar"),
+  ...>   JsonRfc.Patch.copy("/foo", "/baz")
   ...> ]
 
-  iex> Json.Patch.evaluate(doc, ops)
+  iex> JsonRfc.Patch.evaluate(doc, ops)
   {:ok, %{"foo" => %{"bar" => 3}, "baz" => %{"bar" => 3}}}
 ```
 
