@@ -161,12 +161,17 @@ defmodule JsonRfc.Patch do
   @doc """
   Evaluates the given list of ops against the document, and additionally returns the operations themselves in the result tuple.
   """
-  @spec evaluate_with_ops(JsonRfc.value(), opmap() | list(opmap())) :: {:ok, JsonRfc.value()} | {:error, term}
+
+  @spec evaluate_with_ops(JsonRfc.value(), list(opmap())) ::
+          {:ok, JsonRfc.value(), list(opmap)} | {:error, term}
+
+  @spec evaluate_with_ops(JsonRfc.value(), opmap()) ::
+          {:ok, JsonRfc.value(), opmap()} | {:error, term}
+
   def evaluate_with_ops(document, ops) do
     case evaluate(document, ops) do
       {:ok, document} -> {:ok, document, ops}
       error -> error
     end
   end
-
 end
