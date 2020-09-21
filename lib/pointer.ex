@@ -137,6 +137,15 @@ defmodule JsonRfc.Pointer do
   @doc """
   Transform the given `document`, by transforming the value at `pointer`.
 
+  Given a callback of arity 1, the callback recieves the value at `path`, and the
+  return value is place directly at `path`.
+
+  Given a callback of arity 2, however, the callback recieves the value *containing the key* given by `path`,
+  and the return value replaces the *container*. This allows handling immutable containers: you can replace
+  the container with a call to `Map.delete/2` for example.
+
+  Callbacks may return a bare value, or a result tuple (:ok/:error).
+
   ## Examples
 
       # given a callback of arity 1, transforms with the value at `path`
@@ -146,15 +155,20 @@ defmodule JsonRfc.Pointer do
 
       # given a callback of arity 2, transforms with the container and index
       iex> doc = %{"foo" => %{"bar" => 3}}
-      iex> JsonRfc.Pointer.transform(doc, "/foo/bar", fn m, k -> Map.delete(m, k) end)
+      iex> JsonRfc.Pointer.transform(doc, "/foo/bar", &Map.delete(&1, &2))
       {:ok, %{"foo" => %{}}}
   """
 
-  @typep transform_value_callback :: (JsonRfc.value() -> JsonRfc.value())
-  @typep transform_container_callback :: (JsonRfc.value(), JsonRfc.key() -> JsonRfc.value())
-  @typep transform_callback :: transform_value_callback() | transform_container_callback()
+  @spec transform(JsonRfc.value(), binary(), (JsonRfc.value() -> JsonRfc.value())) ::
+          {:ok, JsonRfc.value()} | {:error, term}
 
-  @spec transform(JsonRfc.value(), binary() | path(), transform_callback()) ::
+  @spec transform(JsonRfc.value(), path(), (JsonRfc.value() -> JsonRfc.value())) ::
+          {:ok, JsonRfc.value()} | {:error, term}
+
+  @spec transform(JsonRfc.value(), binary(), (JsonRfc.value(), JsonRfc.key() -> JsonRfc.value())) ::
+          {:ok, JsonRfc.value()} | {:error, term}
+
+  @spec transform(JsonRfc.value(), path(), (JsonRfc.value(), JsonRfc.key() -> JsonRfc.value())) ::
           {:ok, JsonRfc.value()} | {:error, term}
 
   def transform(document, pointer, callback) when is_binary(pointer) do
