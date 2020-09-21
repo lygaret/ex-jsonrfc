@@ -6,7 +6,7 @@ defmodule JsonRfc.MixProject do
   def project do
     [
       app: :jsonrfc,
-      version: "0.3.0",
+      version: "0.3.1",
       elixir: "~> 1.10",
       description: description(),
       package: package(),
