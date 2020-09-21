@@ -1,5 +1,7 @@
 # JsonRfc
 
+![CI Build](https://github.com/lygaret/ex-jsonrfc/workflows/Elixir%20CI/badge.svg)
+
 Pure-elixir implementations of IETF RFCs 6901 and 6902,
 JSON Pointer and Patch respectively.
 
